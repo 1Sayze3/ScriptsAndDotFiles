@@ -1,0 +1,33 @@
+#!/bin/bash
+
+cd ~/Music || { echo "Music directory not found!"; exit; }
+
+shopt -s globstar
+
+echo "Runnin..."
+
+declare -A skipped_dirs
+
+for f in **/*.opus; do
+    dir=$(dirname "$f")
+    if [[ -n "{skipped_dirs[$dir]}" ]]; then
+        continue
+    fi
+
+    cover_file=""
+
+    for ext in jpg jpeg png; do
+        cover_file="$dir/cover.$ext"
+        if [ -f "$cover_file" ]; then
+            break
+        fi
+    done
+
+    if [ -f "$cover_file" ]; then
+        opustags --set-cover "$cover_file" -i "$f";
+    else
+        echo "Cover file not found for $"
+    fi
+done
+
+echo "Completed!"

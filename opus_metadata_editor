@@ -1,0 +1,1 @@
+for f in *.opus; do opustags --set-cover cover.jpg --set "artist=Artist Name" -i "$f"; done

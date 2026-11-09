@@ -1,0 +1,14 @@
+#!/bin/bash
+
+TMP_DIR="/tmp/rmpc"
+
+mkdir -p "$TMP_DIR"
+
+DEFAULT_ALBUM_ART_PATH="~/walp/forrmpc/whoami.jpeg"
+
+if ! rmpc albumart --output "$ALBUM_ART_PATH"; then
+    # Failed to fetch album art, using default instead
+    ALBUM_ART_PATH="${DEFAULT_ALBUM_ART_PATH}"
+fi
+
+notify-send -i "${ALBUM_ART_PATH}" -a "rmpc" "Now Playing" "$ARTIST - $TITLE"

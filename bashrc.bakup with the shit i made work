@@ -1,0 +1,211 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
+# for examples
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# If set, the pattern "**" used in a pathname expansion context will
+# match all files and zero or more directories and subdirectories.
+#shopt -s globstar
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+	# We have color support; assume it's compliant with Ecma-48
+	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+	# a case would tend to support setf rather than setaf.)
+	color_prompt=yes
+    else
+	color_prompt=
+    fi
+fi
+
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+fastfetch
+
+# Alias to pull albums using our custom music profile rules
+alias ytdl-album='yt-dlp --config-locations ~/.config/yt-dlp/music.conf'
+
+# Inline player shortcuts to control rmpc cleanly
+addyt() {
+    rmpc addyt "$*"
+}
+
+syt() {
+    if [[ -z "$*" ]]; then
+        echo "Provide a search query"
+    else
+        rmpc searchyt --interactive "$*"
+    fi
+}
+
+alias cal="ncal -b"
+
+
+# Custom Audio Archival Downloader with Automated LRCLIB Sync (RMPC NOT ABLE TO HAVE TRACKS IN ORDER)
+# Custom Audio Archival Downloader with Automated LRCLIB Sync
+getalbum() {
+    if [ -z "$1" ]; then
+        echo "Error: Please provide a YouTube or YouTube Music URL."
+        echo "Usage: getalbum \"URL\""
+        return 1
+    fi
+
+    # 1. Download tracks with proper sequential 2-digit track numbers
+    echo "Starting sequential archive download..."
+    local target_dir
+
+    yt-dlp -f "bestaudio/best" \
+           --extract-audio \
+           --audio-format opus \
+           --audio-quality 0 \
+           --embed-thumbnail \
+           --embed-metadata \
+           --embed-chapters \
+           --parse-metadata "%(playlist_index,track_number|)s:%(meta_track)s" \
+           -o "/home/soyachunkyballs/Music/%(artist)s - %(album)s/%(playlist_index)02d. %(title)s.%(ext)s" \
+           --print-to-file "/home/soyachunkyballs/Music/%(artist)s - %(album)s" "target_dir" "$1"
+
+    echo "$(echo "$(cat target_dir)" | head -n 1)" > target_dir
+    echo "$(cat target_dir)"
+    if [ ! -d "$(cat target_dir)" ]; then
+        echo "Could not resolve download directory."
+        return 1
+    fi
+
+    echo "Download path confirmed: $(cat target_dir)"
+    echo "Querying LRCLIB database for synchronized lyrics..."
+    cd "$(cat target_dir)" || return 1
+
+    # 2. Loop through every downloaded track to inject lyrics via stream_tags
+    for track in *.opus; do
+        [ -e "$track" ] || continue
+        
+        local title artist
+        title=$(ffprobe -v error -show_entries stream_tags=title -of default=noprint_wrappers=1:nokey=1 "$track")
+        artist=$(ffprobe -v error -show_entries stream_tags=artist -of default=noprint_wrappers=1:nokey=1 "$track")
+
+        if [ -n "$title" ] && [ -n "$artist" ]; then
+            echo "Searching LRCLIB for: $artist - $title"
+            
+            # Step A: Try direct exact lookup first
+            local lyric_data lyrics
+            lyric_data=$(curl -s -G --data-urlencode "artist=$artist" --data-urlencode "title=$title" "https://lrclib.net/api/get")
+            lyrics=$(echo "$lyric_data" | jq -r '.syncedLyrics // .plainLyrics' 2>/dev/null)
+
+            # Step B: Fallback to global search endpoint if direct lookup returned nothing or null
+            if [ -z "$lyrics" ] || [ "$lyrics" = "null" ]; then
+                echo " -> Strict match failed. Trying global fuzzy search..."
+                lyric_data=$(curl -s -G --data-urlencode "q=$artist $title" "https://lrclib.net/api/search")
+                lyrics=$(echo "$lyric_data" | jq -r '.[0].syncedLyrics // .[0].plainLyrics' 2>/dev/null)
+            fi
+
+            # Step C: If lyrics are found anywhere, embed into the Opus audio stream metadata channel
+            if [ -n "$lyrics" ] && [ "$lyrics" != "null" ]; then
+                echo " -> Lyrics found! Embedding tags into $track..."
+                echo "$lyrics" > temp_lyrics.txt
+                ffmpeg -i "$track" -c copy -metadata:s:a:0 LYRICS="$(cat temp_lyrics.txt)" temporary_output.opus -y 2>/dev/null
+                mv temporary_output.opus "$track"
+                rm temp_lyrics.txt
+            else
+                echo " -> No lyrics found on LRCLIB database via fallback search."
+            fi
+        fi
+    done
+    echo "All tracks processed! Informing MPD..."
+    mpc update
+}
